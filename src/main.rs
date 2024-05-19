@@ -14,7 +14,7 @@ use std::{thread, time};
 
 fn main() {
     let mut emulator: Emulator = Emulator::new();
-    let mut visualizer: Visualizer = Visualizer::new(240, 240);
+    let mut visualizer: Visualizer = Visualizer::new(240, 164);
     let config: Config = Config::new();
 
     loop {
