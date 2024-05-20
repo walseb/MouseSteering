@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "mouse-steering"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "directories",
  "minifb",

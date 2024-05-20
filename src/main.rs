@@ -2,60 +2,72 @@
 
 mod config;
 mod emulator;
-mod utils;
-mod visualizer;
+mod gui;
+mod processor;
 
-use crate::emulator::Emulator;
-use crate::utils::{get_thumbstick_x, get_trigger, normalize_value};
-use crate::visualizer::Visualizer;
+use crate::gui::Visualizer;
 use config::Config;
+use emulator::Emulator;
 use mouse_position::mouse_position::Mouse;
-use std::{thread, time};
+use processor::Processor;
+use std::{thread, time::Duration};
 
 fn main() {
-    let mut emulator: Emulator = Emulator::new();
-    let mut visualizer: Visualizer = Visualizer::new(240, 164);
-    let config: Config = Config::new();
+    let mut emulator = Emulator::new();
+    let mut visualizer = Visualizer::new();
+
+    let config = Config::new();
+    let steering_config = &config.steering_config;
+    let throttle_config = &config.throttle_config;
 
     loop {
-        let mouse_pos = Mouse::get_mouse_position();
+        let mouse_position = Mouse::get_mouse_position();
 
-        match mouse_pos {
+        match mouse_position {
             Mouse::Position { x, y } => {
-                if config.steering_enabled {
-                    let normalized_value =
-                        normalize_value(x as f32, 0.0, config.screen_width as f32);
+                if steering_config.enabled {
+                    let normal_value = Processor::normalize(x, 0, config.screen_width);
 
-                    let (thumbstick_x, value) = get_thumbstick_x(normalized_value, &config);
+                    let horizontal_value = Processor::process(normal_value, &steering_config);
 
-                    visualizer.update_steer(value);
-                    emulator.gamepad.thumb_lx = thumbstick_x;
+                    emulator.gamepad.thumb_lx = Processor::to_thumb_val(horizontal_value);
+
+                    let (lval, rval) = if horizontal_value <= 0.0 {
+                        (horizontal_value.abs(), 0.0)
+                    } else {
+                        (0.0, horizontal_value.abs())
+                    };
+
+                    visualizer.update(None, Some(lval), None, Some(rval));
                 }
 
-                if config.throttle_enabled {
-                    let normalized_value =
-                        normalize_value(y as f32, 0.0, config.screen_height as f32);
+                if throttle_config.enabled {
+                    let normal_value = Processor::normalize(y, 0, config.screen_height);
 
-                    let (left_trigger, right_trigger, left_value, right_value) = get_trigger(normalized_value, &config);
+                    let vertical_value = Processor::process(normal_value, &throttle_config);
 
-                    visualizer.update_triggers(left_value, right_value);
-                    emulator.gamepad.left_trigger = left_trigger;
-                    emulator.gamepad.right_trigger = right_trigger;
+                    let (left_trigger, right_trigger) = if vertical_value <= 0.0 {
+                        (0.0, vertical_value.abs())
+                    } else {
+                        (vertical_value.abs(), 0.0)
+                    };
+
+                    emulator.gamepad.left_trigger = Processor::to_trigger_val(left_trigger);
+                    emulator.gamepad.right_trigger = Processor::to_trigger_val(right_trigger);
+
+                    visualizer.update(Some(right_trigger), None, Some(left_trigger), None);
                 }
-
-                emulator.update();
             }
-            Mouse::Error => {
-                println!("Failed to get mouse position!");
-            }
+            Mouse::Error => {}
         }
 
-        visualizer.update();
+        emulator.emulate();
+        visualizer.draw();
 
-        if !visualizer.is_open() {
+        if visualizer.should_close() {
             break;
         }
 
-        thread::sleep(time::Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(1));
     }
 }

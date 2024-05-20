@@ -1,99 +1,42 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io::Error as IoError;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ConfigToml {
-    screen_width: Option<i32>,
-    screen_height: Option<i32>,
-
-    steering_enabled: Option<bool>,
-    steering_smooth: Option<bool>,
-    steering_side_snap: Option<bool>,
-    steering_side_threshold: Option<f32>,
-    steering_center_snap: Option<bool>,
-    steering_center_threshold: Option<f32>,
-
-    throttle_enabled: Option<bool>,
-    throttle_smooth: Option<bool>,
-    throttle_side_snap: Option<bool>,
-    throttle_side_threshold: Option<f32>,
-    throttle_center_snap: Option<bool>,
-    throttle_center_threshold: Option<f32>,
-}
+use std::{fs, io::Error};
 
 #[derive(Debug)]
 pub struct Config {
     pub screen_width: i32,
     pub screen_height: i32,
 
-    pub steering_enabled: bool,
-    pub steering_smooth: bool,
-    pub steering_side_snap: bool,
-    pub steering_side_threshold: f32,
-    pub steering_center_snap: bool,
-    pub steering_center_threshold: f32,
-
-    pub throttle_enabled: bool,
-    pub throttle_smooth: bool,
-    pub throttle_side_snap: bool,
-    pub throttle_side_threshold: f32,
-    pub throttle_center_snap: bool,
-    pub throttle_center_threshold: f32,
+    pub steering_config: ControlConfig,
+    pub throttle_config: ControlConfig,
 }
 
-impl ConfigToml {
-    fn get_defaults() -> ConfigToml {
-        ConfigToml {
-            screen_width: Some(1280),
-            screen_height: Some(720),
+#[derive(Debug)]
+pub struct ControlConfig {
+    pub enabled: bool,
+    pub precise_input: bool,
+    pub snap_input: bool,
+    pub snap_threshold: f32,
+    pub edge_scaling: bool,
+    pub scaling_threshold: f32,
+}
 
-            steering_enabled: Some(true),
-            steering_smooth: Some(true),
-            steering_side_snap: Some(true),
-            steering_side_threshold: Some(0.1),
-            steering_center_snap: Some(true),
-            steering_center_threshold: Some(0.1),
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ConfigToml {
+    pub screen_width: Option<i32>,
+    pub screen_height: Option<i32>,
 
-            throttle_enabled: Some(true),
-            throttle_smooth: Some(true),
-            throttle_side_snap: Some(true),
-            throttle_side_threshold: Some(0.1),
-            throttle_center_snap: Some(true),
-            throttle_center_threshold: Some(0.1),
-        }
-    }
+    pub steering_config: Option<ControlConfigToml>,
+    pub throttle_config: Option<ControlConfigToml>,
+}
 
-    fn merge(config: ConfigToml) -> ConfigToml {
-        let default = ConfigToml::get_defaults();
-
-        ConfigToml {
-            screen_width: config.screen_width.or(default.screen_width),
-            screen_height: config.screen_height.or(default.screen_height),
-
-            steering_enabled: config.steering_enabled.or(default.steering_enabled),
-            steering_smooth: config.steering_smooth.or(default.steering_smooth),
-            steering_side_snap: config.steering_side_snap.or(default.steering_side_snap),
-            steering_side_threshold: config
-                .steering_side_threshold
-                .or(default.steering_side_threshold),
-            steering_center_snap: config.steering_center_snap.or(default.steering_center_snap),
-            steering_center_threshold: config
-                .steering_center_threshold
-                .or(default.steering_center_threshold),
-
-            throttle_enabled: config.throttle_enabled.or(default.throttle_enabled),
-            throttle_smooth: config.throttle_smooth.or(default.throttle_smooth),
-            throttle_side_snap: config.throttle_side_snap.or(default.throttle_side_snap),
-            throttle_side_threshold: config
-                .throttle_side_threshold
-                .or(default.throttle_side_threshold),
-            throttle_center_snap: config.throttle_center_snap.or(default.throttle_center_snap),
-            throttle_center_threshold: config
-                .throttle_center_threshold
-                .or(default.throttle_center_threshold),
-        }
-    }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ControlConfigToml {
+    pub enabled: Option<bool>,
+    pub precise_input: Option<bool>,
+    pub snap_input: Option<bool>,
+    pub snap_threshold: Option<f32>,
+    pub edge_scaling: Option<bool>,
+    pub scaling_threshold: Option<f32>,
 }
 
 impl Config {
@@ -102,7 +45,7 @@ impl Config {
 
         let mut content: String = String::new();
         for filepath in filepaths {
-            let result: Result<String, IoError> = fs::read_to_string(filepath);
+            let result: Result<String, Error> = fs::read_to_string(filepath);
 
             if result.is_ok() {
                 content = result.unwrap();
@@ -110,27 +53,82 @@ impl Config {
             }
         }
 
-        let user_config: ConfigToml =
+        let raw_config: ConfigToml =
             toml::from_str(&content).unwrap_or_else(|_| ConfigToml::get_defaults());
-        let config_toml: ConfigToml = ConfigToml::merge(user_config);
+
+        Config::to_config(raw_config)
+    }
+
+    fn to_config(config: ConfigToml) -> Self {
+        let default = ConfigToml::get_defaults();
+
+        let steering_config = ControlConfig::to_control_config(
+            config
+                .steering_config
+                .unwrap_or(ControlConfigToml::get_defaults()),
+        );
+
+        let throttle_config = ControlConfig::to_control_config(
+            config
+                .throttle_config
+                .unwrap_or(ControlConfigToml::get_defaults()),
+        );
 
         Config {
-            screen_width: config_toml.screen_width.unwrap(),
-            screen_height: config_toml.screen_height.unwrap(),
+            screen_width: config.screen_width.unwrap_or(default.screen_width.unwrap()),
+            screen_height: config
+                .screen_height
+                .unwrap_or(default.screen_height.unwrap()),
 
-            steering_enabled: config_toml.steering_enabled.unwrap(),
-            steering_smooth: config_toml.steering_smooth.unwrap(),
-            steering_side_snap: config_toml.steering_side_snap.unwrap(),
-            steering_side_threshold: config_toml.steering_side_threshold.unwrap(),
-            steering_center_snap: config_toml.steering_center_snap.unwrap(),
-            steering_center_threshold: config_toml.steering_center_threshold.unwrap(),
+            steering_config,
+            throttle_config,
+        }
+    }
+}
 
-            throttle_enabled: config_toml.throttle_enabled.unwrap(),
-            throttle_smooth: config_toml.throttle_smooth.unwrap(),
-            throttle_side_snap: config_toml.throttle_side_snap.unwrap(),
-            throttle_side_threshold: config_toml.throttle_side_threshold.unwrap(),
-            throttle_center_snap: config_toml.throttle_center_snap.unwrap(),
-            throttle_center_threshold: config_toml.throttle_center_threshold.unwrap(),
+impl ControlConfig {
+    fn to_control_config(config: ControlConfigToml) -> Self {
+        let default = ControlConfigToml::get_defaults();
+
+        ControlConfig {
+            enabled: config.enabled.unwrap_or(default.enabled.unwrap()),
+            precise_input: config
+                .precise_input
+                .unwrap_or(default.precise_input.unwrap()),
+            snap_input: config.snap_input.unwrap_or(default.snap_input.unwrap()),
+            snap_threshold: config
+                .snap_threshold
+                .unwrap_or(default.snap_threshold.unwrap()),
+            edge_scaling: config.edge_scaling.unwrap_or(default.edge_scaling.unwrap()),
+            scaling_threshold: config
+                .scaling_threshold
+                .unwrap_or(default.scaling_threshold.unwrap()),
+        }
+    }
+}
+
+impl ConfigToml {
+    fn get_defaults() -> Self {
+        ConfigToml {
+            screen_width: Some(1280),
+            screen_height: Some(720),
+
+            steering_config: Some(ControlConfigToml::get_defaults()),
+
+            throttle_config: Some(ControlConfigToml::get_defaults()),
+        }
+    }
+}
+
+impl ControlConfigToml {
+    fn get_defaults() -> ControlConfigToml {
+        ControlConfigToml {
+            enabled: Some(true),
+            precise_input: Some(true),
+            snap_input: Some(true),
+            snap_threshold: Some(0.1),
+            edge_scaling: Some(false),
+            scaling_threshold: Some(0.5),
         }
     }
 }

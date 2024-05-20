@@ -1,4 +1,4 @@
-use vigem_client::{Client, XGamepad, Xbox360Wired};
+use vigem_client::{Client, TargetId, XGamepad, Xbox360Wired};
 
 pub struct Emulator {
     pub target: Xbox360Wired<Client>,
@@ -7,8 +7,8 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new() -> Self {
-        let client = vigem_client::Client::connect().unwrap();
-        let id = vigem_client::TargetId::XBOX360_WIRED;
+        let client = Client::connect().unwrap();
+        let id = TargetId::XBOX360_WIRED;
         let mut target = Xbox360Wired::new(client, id);
 
         target.plugin().unwrap();
@@ -20,7 +20,7 @@ impl Emulator {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn emulate(&mut self) {
         self.target.update(&self.gamepad).unwrap();
     }
 }
