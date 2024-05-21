@@ -11,13 +11,13 @@ impl Processor {
                 if config.snap_input {
                     Self::apply_snap(value / config.scaling_threshold, config.snap_threshold, config.snap_threshold)
                 } else {
-                    value / config.scaling_threshold
+                    Self::apply_snap(value / config.scaling_threshold, 0.0, 0.0)
                 }
             } else {
                 if config.snap_input {
                     Self::apply_snap(value, config.snap_threshold, config.snap_threshold)
                 } else {
-                    value
+                    Self::apply_snap(value, 0.0, 0.0)
                 }
             }
         } else {
