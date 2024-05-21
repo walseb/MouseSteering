@@ -8,10 +8,18 @@ impl Processor {
     pub fn process(value: f32, config: &ControlConfig) -> f32 {
         if config.precise_input {
             if config.edge_scaling {
+                let adjusted_value = value / config.scaling_threshold;
+
                 if config.snap_input {
-                    Self::apply_snap(value / config.scaling_threshold, config.snap_threshold, config.snap_threshold)
+                    let adjusted_snap_threshold = config.snap_threshold / config.snap_threshold;
+
+                    Self::apply_snap(
+                        adjusted_value,
+                        adjusted_snap_threshold,
+                        adjusted_snap_threshold,
+                    )
                 } else {
-                    Self::apply_snap(value / config.scaling_threshold, 0.0, 0.0)
+                    Self::apply_snap(adjusted_value, 0.0, 0.0)
                 }
             } else {
                 if config.snap_input {
