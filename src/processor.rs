@@ -11,7 +11,7 @@ impl Processor {
                 let adjusted_value = value / config.scaling_threshold;
 
                 if config.snap_input {
-                    let adjusted_snap_threshold = config.snap_threshold / config.snap_threshold;
+                    let adjusted_snap_threshold = config.snap_threshold / config.scaling_threshold;
 
                     Self::apply_snap(
                         adjusted_value,
