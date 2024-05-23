@@ -1,5 +1,6 @@
+use device_query::Keycode;
 use serde::{Deserialize, Serialize};
-use std::{fs, io::Error};
+use std::{fs, io::Error, str::FromStr};
 
 #[derive(Debug)]
 pub struct Config {
@@ -13,11 +14,12 @@ pub struct Config {
 #[derive(Debug)]
 pub struct ControlConfig {
     pub enabled: bool,
+    pub toggle_key: Keycode,
     pub precise_input: bool,
     pub snap_input: bool,
     pub snap_threshold: f32,
     pub edge_scaling: bool,
-    pub scaling_threshold: f32,
+    pub scaling_threshold: f32
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -32,11 +34,12 @@ pub struct ConfigToml {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ControlConfigToml {
     pub enabled: Option<bool>,
+    pub toggle_key: Option<String>,
     pub precise_input: Option<bool>,
     pub snap_input: Option<bool>,
     pub snap_threshold: Option<f32>,
     pub edge_scaling: Option<bool>,
-    pub scaling_threshold: Option<f32>,
+    pub scaling_threshold: Option<f32>
 }
 
 impl Config {
@@ -90,6 +93,9 @@ impl ControlConfig {
     fn to_control_config(config: ControlConfigToml) -> Self {
         let default = ControlConfigToml::get_defaults();
 
+        let toggle_string = config.toggle_key.unwrap_or(default.toggle_key.unwrap());
+        let toggle_key = Keycode::from_str(toggle_string.as_str()).unwrap_or(Keycode::X);
+
         ControlConfig {
             enabled: config.enabled.unwrap_or(default.enabled.unwrap()),
             precise_input: config
@@ -103,6 +109,7 @@ impl ControlConfig {
             scaling_threshold: config
                 .scaling_threshold
                 .unwrap_or(default.scaling_threshold.unwrap()),
+            toggle_key
         }
     }
 }
@@ -129,6 +136,7 @@ impl ControlConfigToml {
             snap_threshold: Some(0.1),
             edge_scaling: Some(false),
             scaling_threshold: Some(0.5),
+            toggle_key: Some("X".to_string()),
         }
     }
 }

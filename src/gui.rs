@@ -6,10 +6,12 @@ fn rgb(red: u32, green: u32, blue: u32) -> u32 {
 
 pub struct Visualizer {
     gui: GUI,
-    tval: f32,
-    lval: f32,
-    bval: f32,
-    rval: f32,
+    pub tval: f32,
+    pub lval: f32,
+    pub bval: f32,
+    pub rval: f32,
+    pub hor_lock: bool,
+    pub ver_lock: bool
 }
 
 struct GUI {
@@ -43,20 +45,9 @@ impl Visualizer {
             lval: 0.0,
             bval: 0.0,
             rval: 0.0,
+            hor_lock: false,
+            ver_lock: false
         }
-    }
-
-    pub fn update(
-        &mut self,
-        tval: Option<f32>,
-        lval: Option<f32>,
-        bval: Option<f32>,
-        rval: Option<f32>,
-    ) {
-        self.tval = tval.unwrap_or(self.tval);
-        self.lval = lval.unwrap_or(self.lval);
-        self.bval = bval.unwrap_or(self.bval);
-        self.rval = rval.unwrap_or(self.rval);
     }
 
     pub fn draw(&mut self) {
@@ -121,13 +112,13 @@ impl Visualizer {
 
     fn draw_container_keys(&mut self) {
         // Up Key
-        self.draw_container_key(Self::COL_2, Self::ROW_1);
+        self.draw_container_key(Self::COL_2, Self::ROW_1, self.ver_lock);
         // Left Key
-        self.draw_container_key(Self::COL_1, Self::ROW_2);
+        self.draw_container_key(Self::COL_1, Self::ROW_2, self.hor_lock);
         // Down Key
-        self.draw_container_key(Self::COL_2, Self::ROW_2);
+        self.draw_container_key(Self::COL_2, Self::ROW_2, self.ver_lock);
         // Right Key
-        self.draw_container_key(Self::COL_3, Self::ROW_2);
+        self.draw_container_key(Self::COL_3, Self::ROW_2, self.hor_lock);
     }
 
     fn draw_arrows(&mut self) {
@@ -159,9 +150,15 @@ impl Visualizer {
         );
     }
 
-    fn draw_container_key(&mut self, x: usize, y: usize) {
+    fn draw_container_key(&mut self, x: usize, y: usize, locked: bool) {
+        let color = if locked {
+            rgb(25, 25, 25)
+        } else {
+            rgb(55, 55, 55)
+        };
+
         self.gui
-            .draw_rect(x, y, Self::KEY_SIZE, Self::KEY_SIZE, Some(rgb(55, 55, 55)));
+            .draw_rect(x, y, Self::KEY_SIZE, Self::KEY_SIZE, Some(color));
     }
 
     fn draw_arrow(&mut self, x: usize, y: usize, shape: Shape) {
