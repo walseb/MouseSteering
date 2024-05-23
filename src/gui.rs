@@ -39,10 +39,10 @@ impl Visualizer {
 
         Visualizer {
             gui,
-            tval: 0.5,
-            lval: 0.5,
-            bval: 0.5,
-            rval: 0.5,
+            tval: 0.0,
+            lval: 0.0,
+            bval: 0.0,
+            rval: 0.0,
         }
     }
 
